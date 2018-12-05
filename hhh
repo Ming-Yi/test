@@ -1,0 +1,27 @@
+# -*- encoding: utf8 -*-
+# ======================
+from pyspark.sql import Window
+from pyspark.sql.functions import mean, rank, desc, stddev
+
+from common.consts import TBL_ANAL_SIMULATE_REPORT, TBL_ANAL_SIMULATE_RULE, TBL_ANAL_SIMULATE_METADATA
+from utils.simulation_utils import load_table, save_table
+
+
+def gen_simulation_report(spark):
+    df = load_table(spark, TBL_ANAL_SIMULATE_METADATA) \
+        .groupBy(['cncy_pair', 'threshold', 'rtn_in', 'rtn_keep']) \
+        .agg(mean('mean_total_return').alias('mean_total_return'),
+             stddev('mean_total_return').alias('std_total_return'),
+             mean('mean_in_time').alias('mean_in_time'),
+             mean('mean_hold_day').alias('mean_hold_day'),
+             mean('mean_volatility').alias('mean_hold_day_volatility'))
+    save_table(df, TBL_ANAL_SIMULATE_REPORT)
+
+
+def gen_simulation_rule(spark):
+    w = Window.partitionBy(['cncy_pair']).orderBy(desc('mean_total_return'))
+    df = load_table(spark, TBL_ANAL_SIMULATE_REPORT) \
+        .withColumn("rank", rank().over(w)) \
+        .where("rank = 1") \
+        .drop("rank")
+    save_table(df, TBL_ANAL_SIMULATE_RULE)
