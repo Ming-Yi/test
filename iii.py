@@ -33,16 +33,16 @@ def transfer_fund_code(spark, data_df, tx_dt):
         .select(['robin_fund_code', 'fund_code']) \
         .distinct()
 
-    cols = ['tx_dt', 'portfolio_id', 'fund_code', 'operation', 'operation_value']
+    cols = ['tx_dt', 'portfolio_id', 'fund_code', 'robin_fund_code', 'operation', 'operation_value']
     original_df = data_df.join(fund_portfolio, on=['robin_fund_code'], how="left") \
         .select(cols) \
-        .checkout()
+        .checkpoint()
 
     new_df = original_df.where(col("fund_code").isNull()) \
         .drop("fund_code") \
         .join(fund_sell, on=['robin_fund_code'], how='left') \
         .select(cols) \
-        .checkout()
+        .checkpoint()
     return original_df.unionAll(new_df)
 
 
